@@ -43,6 +43,8 @@ export interface FirewallEnvelope extends MutationContext {
   previousHash?: string;
 }
 
+export type MutationEnvelope = FirewallEnvelope;
+
 export type FirewallDecision = 'ALLOW' | 'DENY' | 'FLAG' | 'ESCALATE';
 
 export interface FirewallResult {
@@ -59,6 +61,8 @@ export interface FirewallRule {
   priority: number;
   evaluate: (ctx: FirewallEnvelope) => FirewallDecision | null;
 }
+
+export type MutationRule = FirewallRule;
 
 const mutationLog = new HashChainLog();
 
@@ -218,6 +222,9 @@ function appendDecision(result: FirewallResult, ctx: MutationContext): void {
     reason: result.reason,
     payloadHash: result.envelope.payloadHash,
     envelopeHash: result.envelope.canonicalHash,
+    ...(result.envelope.previousHash === undefined
+      ? {}
+      : { previousHash: result.envelope.previousHash }),
     timestamp: result.timestamp,
   });
 }
@@ -235,6 +242,14 @@ export function getFirewallRules(): FirewallRule[] {
 
 export function addFirewallRule(rule: FirewallRule): void {
   firewallRules.push(rule);
+}
+
+export function addRule(rule: MutationRule): void {
+  addFirewallRule(rule);
+}
+
+export function listRules(): MutationRule[] {
+  return getFirewallRules();
 }
 
 export function getMutationLog(): LogEntry[] {

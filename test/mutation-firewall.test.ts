@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addFirewallRule,
+  addRule,
   evaluateMutation,
   getMutationLog,
   getFirewallRules,
+  listRules,
   mutationFirewall,
   verifyMutationLog,
   type FirewallRule,
+  type MutationRule,
   type MutationContext,
 } from '../src/mutation-firewall';
 import { computePayloadHash } from '../src/canonical';
@@ -70,6 +72,7 @@ describe('mutation firewall', () => {
     expect(entry.previousLogHash).toBe(
       previousAuditHash ?? '0'.repeat(64),
     );
+    expect(entry.previousHash).toBe(suppliedPreviousHash);
     expect(verifyMutationLog()).toBe(-1);
   });
 
@@ -162,13 +165,14 @@ describe('mutation firewall', () => {
   });
 
   it('adds custom rules to the default rule set', () => {
-    const rule: FirewallRule = {
+    const rule: MutationRule = {
       id: 'R-CUSTOM-TEST',
       description: 'Test rule',
       priority: 60,
       evaluate: () => 'DENY',
     };
-    addFirewallRule(rule);
+    addRule(rule);
     expect(getFirewallRules().some(({ id }) => id === rule.id)).toBe(true);
+    expect(listRules()).toEqual(getFirewallRules());
   });
 });

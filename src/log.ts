@@ -20,6 +20,7 @@ export interface LogEntryBody {
   reason: string;
   payloadHash: string;
   envelopeHash: string;
+  previousHash?: string;
   timestamp: string;
   previousLogHash: string;
 }
