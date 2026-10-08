@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   addFirewallRule,
   evaluateMutation,
+  getMutationLog,
   getFirewallRules,
   mutationFirewall,
+  verifyMutationLog,
   type FirewallRule,
   type MutationContext,
 } from '../src/mutation-firewall';
+import { computePayloadHash } from '../src/canonical';
 
 const context = (overrides: Partial<MutationContext> = {}): MutationContext => ({
   actor: { id: 'actor', role: 'citizen', jurisdiction: 'municipal' },
@@ -29,6 +32,27 @@ describe('mutation firewall', () => {
       'R-0004',
       'R-0005',
     ]);
+  });
+
+  it('hashes the envelope and appends a deterministic hash-chain entry', () => {
+    const ctx = context();
+    const result = mutationFirewall(ctx);
+    const entries = getMutationLog();
+    const entry = entries.at(-1)!;
+
+    expect(result.timestamp).toBe(ctx.payload.timestamp);
+    expect(result.envelope.payloadHash).toBe(computePayloadHash(ctx.payload.data));
+    expect(result.envelope.canonicalHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(entry).toMatchObject({
+      mutationId: ctx.payload.nonce,
+      decision: 'ACCEPT',
+      actorId: ctx.actor.id,
+      artifactType: ctx.target.resourceType,
+      payloadHash: result.envelope.payloadHash,
+      envelopeHash: result.envelope.canonicalHash,
+      timestamp: ctx.payload.timestamp,
+    });
+    expect(verifyMutationLog()).toBe(-1);
   });
 
   it('denies system-scope mutations from non-system actors', () => {

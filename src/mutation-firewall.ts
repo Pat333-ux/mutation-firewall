@@ -1,3 +1,6 @@
+import { canonicalize, computePayloadHash, sha256 } from './canonical.js';
+import { HashChainLog, type LogEntry } from './log.js';
+
 export type MutationScope =
   | 'municipal'
   | 'state'
@@ -34,6 +37,11 @@ export interface MutationContext {
   channel?: string;
 }
 
+export interface FirewallEnvelope extends MutationContext {
+  payloadHash: string;
+  canonicalHash: string;
+}
+
 export type FirewallDecision = 'ALLOW' | 'DENY' | 'FLAG' | 'ESCALATE';
 
 export interface FirewallResult {
@@ -41,14 +49,17 @@ export interface FirewallResult {
   reason: string;
   ruleId: string;
   timestamp: string;
+  envelope: FirewallEnvelope;
 }
 
 export interface FirewallRule {
   id: string;
   description: string;
   priority: number;
-  evaluate: (ctx: MutationContext) => FirewallDecision | null;
+  evaluate: (ctx: FirewallEnvelope) => FirewallDecision | null;
 }
+
+const mutationLog = new HashChainLog();
 
 const firewallRules: FirewallRule[] = [
   {
@@ -142,26 +153,58 @@ export function evaluateMutation(
   rules: FirewallRule[] = firewallRules,
 ): FirewallResult {
   const orderedRules = sortRulesDeterministically(rules);
-  const now = new Date().toISOString();
+  const payloadHash = computePayloadHash(ctx.payload.data);
+  const envelopeBody = { ...ctx, payloadHash };
+  const envelope: FirewallEnvelope = {
+    ...envelopeBody,
+    canonicalHash: sha256(canonicalize(envelopeBody)),
+  };
+  const timestamp = ctx.payload.timestamp;
 
   for (const rule of orderedRules) {
-    const decision = rule.evaluate(ctx);
+    const decision = rule.evaluate(envelope);
     if (decision) {
-      return {
+      const result: FirewallResult = {
         decision,
         reason: rule.description,
         ruleId: rule.id,
-        timestamp: now,
+        timestamp,
+        envelope,
       };
+      appendDecision(result, ctx);
+      return result;
     }
   }
 
-  return {
+  const result: FirewallResult = {
     decision: 'ALLOW',
     reason: 'No firewall rule matched; default allow.',
     ruleId: 'R-DEFAULT',
-    timestamp: now,
+    timestamp,
+    envelope,
   };
+  appendDecision(result, ctx);
+  return result;
+}
+
+function appendDecision(result: FirewallResult, ctx: MutationContext): void {
+  const decision =
+    result.decision === 'ALLOW'
+      ? 'ACCEPT'
+      : result.decision === 'DENY'
+        ? 'REJECT'
+        : 'QUEUE_FOR_APPROVAL';
+
+  mutationLog.append({
+    mutationId: ctx.payload.nonce,
+    decision,
+    actorId: ctx.actor.id,
+    artifactType: ctx.target.resourceType,
+    reason: result.reason,
+    payloadHash: result.envelope.payloadHash,
+    envelopeHash: result.envelope.canonicalHash,
+    timestamp: result.timestamp,
+  });
 }
 
 export function mutationFirewall(ctx: MutationContext): FirewallResult {
@@ -174,4 +217,12 @@ export function getFirewallRules(): FirewallRule[] {
 
 export function addFirewallRule(rule: FirewallRule): void {
   firewallRules.push(rule);
+}
+
+export function getMutationLog(): LogEntry[] {
+  return mutationLog.snapshot();
+}
+
+export function verifyMutationLog(): number {
+  return mutationLog.verify();
 }
