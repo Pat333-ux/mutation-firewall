@@ -7,6 +7,7 @@ Deterministic hash-integrity layer for a single write gateway.
 - `envelope.ts`: signed mutation envelope (binds payload hash, artifact, actor, nonce, timestamp)
 - `signature.ts`: EIP-191 signature verification against a trusted address set
 - `log.ts`: append-only hash-chained log with `verifyChain()`
+- `mutation-firewall.ts`: prioritized mutation rules and deterministic evaluation
 
 ## Design decisions
 - `-0` is normalized to `0`.
