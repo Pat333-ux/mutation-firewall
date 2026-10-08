@@ -40,6 +40,7 @@ export interface MutationContext {
 export interface FirewallEnvelope extends MutationContext {
   payloadHash: string;
   canonicalHash: string;
+  previousHash?: string;
 }
 
 export type FirewallDecision = 'ALLOW' | 'DENY' | 'FLAG' | 'ESCALATE';
@@ -150,11 +151,32 @@ function sortRulesDeterministically(rules: FirewallRule[]): FirewallRule[] {
 
 export function evaluateMutation(
   ctx: MutationContext,
-  rules: FirewallRule[] = firewallRules,
+  previousHash?: string,
+): FirewallResult;
+export function evaluateMutation(
+  ctx: MutationContext,
+  rules?: FirewallRule[],
+  previousHash?: string,
+): FirewallResult;
+export function evaluateMutation(
+  ctx: MutationContext,
+  rulesOrPreviousHash: FirewallRule[] | string = firewallRules,
+  suppliedPreviousHash?: string,
 ): FirewallResult {
+  const rules = Array.isArray(rulesOrPreviousHash)
+    ? rulesOrPreviousHash
+    : firewallRules;
+  const previousHash =
+    typeof rulesOrPreviousHash === 'string'
+      ? rulesOrPreviousHash
+      : suppliedPreviousHash;
   const orderedRules = sortRulesDeterministically(rules);
   const payloadHash = computePayloadHash(ctx.payload.data);
-  const envelopeBody = { ...ctx, payloadHash };
+  const envelopeBody = {
+    ...ctx,
+    payloadHash,
+    ...(previousHash === undefined ? {} : { previousHash }),
+  };
   const envelope: FirewallEnvelope = {
     ...envelopeBody,
     canonicalHash: sha256(canonicalize(envelopeBody)),
@@ -200,8 +222,11 @@ function appendDecision(result: FirewallResult, ctx: MutationContext): void {
   });
 }
 
-export function mutationFirewall(ctx: MutationContext): FirewallResult {
-  return evaluateMutation(ctx);
+export function mutationFirewall(
+  ctx: MutationContext,
+  previousHash?: string,
+): FirewallResult {
+  return evaluateMutation(ctx, previousHash);
 }
 
 export function getFirewallRules(): FirewallRule[] {

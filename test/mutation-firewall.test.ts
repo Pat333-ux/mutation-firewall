@@ -55,6 +55,24 @@ describe('mutation firewall', () => {
     expect(verifyMutationLog()).toBe(-1);
   });
 
+  it('binds a supplied previous hash into the envelope without replacing the audit chain', () => {
+    const ctx = context();
+    const previousAuditHash = getMutationLog().at(-1)?.logHash;
+    const suppliedPreviousHash = 'a'.repeat(64);
+    const result = mutationFirewall(ctx, suppliedPreviousHash);
+    const entries = getMutationLog();
+    const entry = entries.at(-1)!;
+
+    expect(result.envelope.previousHash).toBe(suppliedPreviousHash);
+    expect(
+      mutationFirewall(ctx).envelope.canonicalHash,
+    ).not.toBe(result.envelope.canonicalHash);
+    expect(entry.previousLogHash).toBe(
+      previousAuditHash ?? '0'.repeat(64),
+    );
+    expect(verifyMutationLog()).toBe(-1);
+  });
+
   it('denies system-scope mutations from non-system actors', () => {
     const result = mutationFirewall(
       context({ target: { id: 'target', scope: 'system', resourceType: 'config' } }),
