@@ -43,8 +43,6 @@ export interface FirewallEnvelope extends MutationContext {
   previousHash?: string;
 }
 
-export type MutationEnvelope = FirewallEnvelope;
-
 export type FirewallDecision = 'ALLOW' | 'DENY' | 'FLAG' | 'ESCALATE';
 
 export interface FirewallResult {
