@@ -188,16 +188,9 @@ export function evaluateMutation(
 }
 
 function appendDecision(result: FirewallResult, ctx: MutationContext): void {
-  const decision =
-    result.decision === 'ALLOW'
-      ? 'ACCEPT'
-      : result.decision === 'DENY'
-        ? 'REJECT'
-        : 'QUEUE_FOR_APPROVAL';
-
   mutationLog.append({
     mutationId: ctx.payload.nonce,
-    decision,
+    decision: result.decision,
     actorId: ctx.actor.id,
     artifactType: ctx.target.resourceType,
     reason: result.reason,

@@ -2,7 +2,14 @@ import { canonicalize, sha256 } from './canonical.js';
 
 export const GENESIS_HASH = '0'.repeat(64);
 
-export type Decision = 'ACCEPT' | 'REJECT' | 'QUEUE_FOR_APPROVAL';
+export type Decision =
+  | 'ACCEPT'
+  | 'REJECT'
+  | 'QUEUE_FOR_APPROVAL'
+  | 'ALLOW'
+  | 'DENY'
+  | 'FLAG'
+  | 'ESCALATE';
 
 export interface LogEntryBody {
   seq: number;

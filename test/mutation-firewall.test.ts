@@ -45,7 +45,7 @@ describe('mutation firewall', () => {
     expect(result.envelope.canonicalHash).toMatch(/^[a-f0-9]{64}$/);
     expect(entry).toMatchObject({
       mutationId: ctx.payload.nonce,
-      decision: 'ACCEPT',
+      decision: 'ALLOW',
       actorId: ctx.actor.id,
       artifactType: ctx.target.resourceType,
       payloadHash: result.envelope.payloadHash,
