@@ -3,3 +3,4 @@ export * from './envelope.js';
 export * from './signature.js';
 export * from './log.js';
 export * from './mutation-firewall.js';
+export * from './routing.js';
