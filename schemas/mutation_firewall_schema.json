@@ -1,0 +1,50 @@
+JSON
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BEASTMutationFirewallSchema",
+  "type": "object",
+  "properties": {
+    "mutation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique global identifier for the state mutation attempt."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_module": {
+      "type": "string",
+      "description": "Originating module or service attempting the mutation."
+    },
+    "mutation_type": {
+      "type": "string",
+      "enum": ["STATE_WRITE", "IDENTITY_MUTATION", "TOKEN_DISBURSEMENT", "CONFIG_OVERRIDE"]
+    },
+    "cryptographic_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "SHA-256 cryptographic digest of the mutation payload."
+    },
+    "judicial_compliance_hash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "Division 003 approval hash certifying the mutation."
+    },
+    "sentinel_verification_sig": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "Division 005 security verification signature."
+    }
+  },
+  "required": [
+    "mutation_id",
+    "timestamp",
+    "source_module",
+    "mutation_type",
+    "cryptographic_hash",
+    "judicial_compliance_hash",
+    "sentinel_verification_sig"
+  ],
+  "additionalProperties": false
+}
